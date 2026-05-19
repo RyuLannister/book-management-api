@@ -70,6 +70,7 @@ class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception::class)
     fun handleGenericException(ex: Exception): ResponseEntity<ErrorResponse> {
+        ex.printStackTrace() // DEBUG: 一時的にスタックトレースを出力
         val errorResponse = ErrorResponse(
             error = "Internal Server Error",
             message = ex.message ?: "予期しないエラーが発生しました"

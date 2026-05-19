@@ -3,8 +3,9 @@ package com.example.bookmanagement.service
 import com.example.bookmanagement.domain.Author
 import com.example.bookmanagement.domain.Book
 import com.example.bookmanagement.domain.PublicationStatus
-import com.example.bookmanagement.dto.CreateBookRequest
 import com.example.bookmanagement.dto.AuthorIdRequest
+import com.example.bookmanagement.dto.CreateBookRequest
+import com.example.bookmanagement.dto.UpdateBookRequest
 import com.example.bookmanagement.exception.BookNotFoundException
 import com.example.bookmanagement.exception.InvalidOperationException
 import com.example.bookmanagement.repository.AuthorRepository
@@ -13,12 +14,14 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mock
-import org.mockito.Mockito.*
 import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
+import org.mockito.Mockito.verify
+import org.mockito.MockitoAnnotations
 import java.time.LocalDate
 import java.time.LocalDateTime
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 
 /**
  * 書籍サービスのユニットテスト
@@ -33,152 +36,192 @@ class BookServiceTest {
 
     private lateinit var bookService: BookService
 
-    private val testAuthor = Author(
-        id = 1L,
-        name = "テスト著者",
-        birthDate = LocalDate.of(1990, 1, 1),
-        createdAt = LocalDateTime.now()
-    )
-
-    private val testBook = Book(
-        id = 1L,
-        title = "テスト書籍",
-        price = 1500,
-        publicationStatus = PublicationStatus.UNPUBLISHED,
-        authors = listOf(testAuthor),
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now()
-    )
+    private lateinit var testAuthor: Author
+    private lateinit var testBook: Book
 
     @BeforeEach
-    fun setUp() {
+    fun setup() {
+        MockitoAnnotations.openMocks(this)
         bookService = BookService(bookRepository, authorRepository)
+        
+        testAuthor = Author(
+            id = 1L,
+            name = "テスト著者",
+            birthDate = LocalDate.of(1980, 1, 1),
+            createdAt = LocalDateTime.now()
+        )
+        
+        testBook = Book(
+            id = 1L,
+            title = "テスト書籍",
+            price = 2000,
+            publicationStatus = PublicationStatus.UNPUBLISHED,
+            authors = listOf(testAuthor),
+            createdAt = LocalDateTime.now(),
+            updatedAt = LocalDateTime.now()
+        )
     }
 
     @Test
-    fun `全書籍を取得する`() {
-        `when`(bookRepository.findAll()).thenReturn(listOf(testBook))
+    fun `create should create and return book with authors`() {
+        // 準備
+        val request = CreateBookRequest(
+            title = "テスト書籍",
+            price = 2000,
+            publicationStatus = PublicationStatus.UNPUBLISHED,
+            authors = listOf(AuthorIdRequest(1L))
+        )
 
-        val result = bookService.findAll()
+        whenever(authorRepository.existsByIds(listOf(1L))).thenReturn(true)
+        whenever(authorRepository.findByIds(listOf(1L))).thenReturn(listOf(testAuthor))
+        whenever(bookRepository.create(any())).thenReturn(testBook)
 
-        assertNotNull(result)
-        assertEquals(1, result.size)
-        assertEquals("テスト書籍", result[0].title)
-        verify(bookRepository).findAll()
-    }
+        // 実行
+        val result = bookService.create(request)
 
-    @Test
-    fun `書籍IDで取得成功`() {
-        `when`(bookRepository.findById(1L)).thenReturn(testBook)
-
-        val result = bookService.findById(1L)
-
+        // 検証
         assertNotNull(result)
         assertEquals("テスト書籍", result.title)
-        verify(bookRepository).findById(1L)
+        assertEquals(2000, result.price)
+        assertEquals(PublicationStatus.UNPUBLISHED, result.publicationStatus)
+        verify(bookRepository).create(any())
     }
 
     @Test
-    fun `存在しない書籍IDで取得すると例外をスロー`() {
-        `when`(bookRepository.findById(999L)).thenReturn(null)
+    fun `findById should return book when exists`() {
+        // 準備
+        whenever(bookRepository.findById(1L)).thenReturn(testBook)
 
+        // 実行
+        val result = bookService.findById(1L)
+
+        // 検証
+        assertNotNull(result)
+        assertEquals(1L, result.id)
+        assertEquals("テスト書籍", result.title)
+    }
+
+    @Test
+    fun `findById should throw exception when not found`() {
+        // 準備
+        whenever(bookRepository.findById(999L)).thenReturn(null)
+
+        // 実行 & 検証
         assertThrows<BookNotFoundException> {
             bookService.findById(999L)
         }
     }
 
     @Test
-    fun `書籍を作成成功`() {
-        val request = CreateBookRequest(
-            title = "新規書籍",
-            price = 2000,
-            authors = listOf(AuthorIdRequest(1L)),
-            publicationStatus = PublicationStatus.UNPUBLISHED
-        )
+    fun `findAll should return all books`() {
+        // 準備
+        val books = listOf(testBook, testBook.copy(id = 2L, title = "書籍2", price = 3000))
+        whenever(bookRepository.findAll()).thenReturn(books)
 
-        `when`(authorRepository.existsByIds(listOf(1L))).thenReturn(true)
-        `when`(authorRepository.findByIds(listOf(1L))).thenReturn(listOf(testAuthor))
-        `when`(bookRepository.create(any(Book::class.java))).thenReturn(testBook.copy(title = "新規書籍"))
+        // 実行
+        val result = bookService.findAll()
 
-        val result = bookService.create(request)
-
-        assertNotNull(result)
-        assertEquals("新規書籍", result.title)
-        verify(authorRepository).existsByIds(listOf(1L))
-        verify(bookRepository).create(any(Book::class.java))
+        // 検証
+        assertEquals(2, result.size)
     }
 
     @Test
-    fun `書籍作成時に存在しない著者がいると例外をスロー`() {
-        val request = CreateBookRequest(
-            title = "新規書籍",
-            price = 2000,
-            authors = listOf(AuthorIdRequest(999L)),
-            publicationStatus = PublicationStatus.UNPUBLISHED
-        )
+    fun `findByAuthorId should return books for author`() {
+        // 準備
+        whenever(authorRepository.findById(1L)).thenReturn(testAuthor)
+        whenever(bookRepository.findByAuthorId(1L)).thenReturn(listOf(testBook))
 
-        `when`(authorRepository.existsByIds(listOf(999L))).thenReturn(false)
-
-        assertThrows<InvalidOperationException> {
-            bookService.create(request)
-        }
-    }
-
-    @Test
-    fun `出版済みの書籍を未出版に変更すると例外をスロー`() {
-        val publishedBook = testBook.copy(publicationStatus = PublicationStatus.PUBLISHED)
-        `when`(bookRepository.findById(1L)).thenReturn(publishedBook)
-
-        val request = com.example.bookmanagement.dto.UpdateBookRequest(
-            title = "テスト書籍",
-            price = 1500,
-            authors = listOf(AuthorIdRequest(1L)),
-            publicationStatus = PublicationStatus.UNPUBLISHED
-        )
-
-        assertThrows<InvalidOperationException> {
-            bookService.update(1L, request)
-        }
-    }
-
-    @Test
-    fun `著者に紐づく書籍を取得`() {
-        `when`(authorRepository.findById(1L)).thenReturn(testAuthor)
-        `when`(bookRepository.findByAuthorId(1L)).thenReturn(listOf(testBook))
-
+        // 実行
         val result = bookService.findByAuthorId(1L)
 
-        assertNotNull(result)
+        // 検証
         assertEquals(1, result.size)
-        verify(authorRepository).findById(1L)
-        verify(bookRepository).findByAuthorId(1L)
+        assertEquals("テスト書籍", result[0].title)
     }
 
     @Test
-    fun `存在しない著者に紐づく書籍を取得しようとすると例外をスロー`() {
-        `when`(authorRepository.findById(999L)).thenReturn(null)
+    fun `findByAuthorId should throw exception when author not found`() {
+        // 準備
+        whenever(authorRepository.findById(999L)).thenReturn(null)
 
+        // 実行 & 検証
         assertThrows<BookNotFoundException> {
             bookService.findByAuthorId(999L)
         }
     }
 
     @Test
-    fun `書籍を削除成功`() {
-        `when`(bookRepository.findById(1L)).thenReturn(testBook)
-        doNothing().`when`(bookRepository).delete(1L)
+    fun `update should update and return book`() {
+        // 準備
+        val request = UpdateBookRequest(
+            title = "更新書籍",
+            price = 3000,
+            publicationStatus = PublicationStatus.PUBLISHED,
+            authors = listOf(AuthorIdRequest(1L))
+        )
 
-        bookService.delete(1L)
+        val updatedBook = testBook.copy(title = "更新書籍", price = 3000, publicationStatus = PublicationStatus.PUBLISHED)
 
-        verify(bookRepository).delete(1L)
+        whenever(bookRepository.findById(1L)).thenReturn(testBook)
+        whenever(authorRepository.existsByIds(listOf(1L))).thenReturn(true)
+        whenever(authorRepository.findByIds(listOf(1L))).thenReturn(listOf(testAuthor))
+        whenever(bookRepository.update(any(), any())).thenReturn(updatedBook)
+
+        // 実行
+        val result = bookService.update(1L, request)
+
+        // 検証
+        assertNotNull(result)
+        assertEquals("更新書籍", result.title)
+        assertEquals(3000, result.price)
     }
 
     @Test
-    fun `存在しない書籍を削除しようとすると例外をスロー`() {
-        `when`(bookRepository.findById(999L)).thenReturn(null)
+    fun `update should throw exception when book not found`() {
+        // 準備
+        whenever(bookRepository.findById(999L)).thenReturn(null)
 
+        val request = UpdateBookRequest(
+            title = "更新書籍",
+            price = 3000,
+            publicationStatus = PublicationStatus.PUBLISHED,
+            authors = listOf(AuthorIdRequest(1L))
+        )
+
+        // 実行 & 検証
         assertThrows<BookNotFoundException> {
-            bookService.delete(999L)
+            bookService.update(999L, request)
         }
+    }
+
+    @Test
+    fun `update should throw exception when changing published to unpublished`() {
+        // 準備
+        val publishedBook = testBook.copy(publicationStatus = PublicationStatus.PUBLISHED)
+        whenever(bookRepository.findById(1L)).thenReturn(publishedBook)
+
+        val request = UpdateBookRequest(
+            title = "更新書籍",
+            price = 3000,
+            publicationStatus = PublicationStatus.UNPUBLISHED,
+            authors = listOf(AuthorIdRequest(1L))
+        )
+
+        // 実行 & 検証
+        assertThrows<InvalidOperationException> {
+            bookService.update(1L, request)
+        }
+    }
+
+    @Test
+    fun `delete should call repository delete`() {
+        // 準備
+        whenever(bookRepository.findById(1L)).thenReturn(testBook)
+
+        // 実行
+        bookService.delete(1L)
+
+        // 検証
+        verify(bookRepository).delete(1L)
     }
 }

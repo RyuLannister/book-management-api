@@ -29,3 +29,6 @@ generated-src/
 # Application
 *.jar
 *.class
+
+# Gradle cache
+.gradle/

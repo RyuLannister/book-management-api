@@ -1,10 +1,10 @@
 package com.example.bookmanagement.repository
 
 import com.example.bookmanagement.domain.Author
+import com.example.bookmanagement.domain.Tables
+import com.example.bookmanagement.domain.tables.records.AuthorsRecord
 import org.jooq.DSLContext
-import org.jooq.Record
 import org.springframework.stereotype.Repository
-import com.example.bookmanagement.domain.Tables.*
 
 /**
  * 著者リポジトリ
@@ -17,22 +17,23 @@ class AuthorRepository(private val dsl: DSLContext) {
      * 著者を作成
      */
     fun create(author: Author): Author {
-        val record = dsl.newRecord(AUTHORS).apply {
-            this.name = author.name
-            this.birthDate = author.birthDate
+        val record = dsl.newRecord(Tables.AUTHORS).apply {
+            this.setName(author.name)
+            this.setBirthDate(author.birthDate)
         }.also { it.insert() }
+        record.refresh() // DBのDEFAULT値を取得
 
-        return author.copy(id = record.id, createdAt = record.createdAt)
+        return author.copy(id = record.getId(), createdAt = record.getCreatedAt())
     }
 
     /**
      *  著者を更新
      */
     fun update(id: Long, author: Author): Author {
-        dsl.update(AUTHORS)
-            .set(AUTHORS.NAME, author.name)
-            .set(AUTHORS.BIRTH_DATE, author.birthDate)
-            .where(AUTHORS.ID.eq(id))
+        dsl.update(Tables.AUTHORS)
+            .set(Tables.AUTHORS.NAME, author.name)
+            .set(Tables.AUTHORS.BIRTH_DATE, author.birthDate)
+            .where(Tables.AUTHORS.ID.eq(id))
             .execute()
 
         return findById(id)!!
@@ -42,8 +43,8 @@ class AuthorRepository(private val dsl: DSLContext) {
      * 全 著者を取得
      */
     fun findAll(): List<Author> {
-        return dsl.selectFrom(AUTHORS)
-            .orderBy(AUTHORS.ID)
+        return dsl.selectFrom(Tables.AUTHORS)
+            .orderBy(Tables.AUTHORS.ID)
             .fetch()
             .map { mapAuthorRecord(it) }
     }
@@ -52,8 +53,8 @@ class AuthorRepository(private val dsl: DSLContext) {
      * 著者IDで取得
      */
     fun findById(id: Long): Author? {
-        return dsl.selectFrom(AUTHORS)
-            .where(AUTHORS.ID.eq(id))
+        return dsl.selectFrom(Tables.AUTHORS)
+            .where(Tables.AUTHORS.ID.eq(id))
             .fetchOne()
             ?.let { mapAuthorRecord(it) }
     }
@@ -64,8 +65,8 @@ class AuthorRepository(private val dsl: DSLContext) {
     fun findByIds(ids: List<Long>): List<Author> {
         if (ids.isEmpty()) return emptyList()
 
-        return dsl.selectFrom(AUTHORS)
-            .where(AUTHORS.ID.`in`(ids))
+        return dsl.selectFrom(Tables.AUTHORS)
+            .where(Tables.AUTHORS.ID.`in`(ids))
             .fetch()
             .map { mapAuthorRecord(it) }
     }
@@ -75,8 +76,8 @@ class AuthorRepository(private val dsl: DSLContext) {
      */
     fun existsByIds(ids: List<Long>): Boolean {
         val count = dsl.selectCount()
-            .from(AUTHORS)
-            .where(AUTHORS.ID.`in`(ids))
+            .from(Tables.AUTHORS)
+            .where(Tables.AUTHORS.ID.`in`(ids))
             .fetchOne(0, Int::class.java)
 
         return count == ids.size
@@ -86,17 +87,17 @@ class AuthorRepository(private val dsl: DSLContext) {
      *  著者を削除
      */
     fun delete(id: Long) {
-        dsl.deleteFrom(AUTHORS)
-            .where(AUTHORS.ID.eq(id))
+        dsl.deleteFrom(Tables.AUTHORS)
+            .where(Tables.AUTHORS.ID.eq(id))
             .execute()
     }
 
-    private fun mapAuthorRecord(record: Record): Author {
+    private fun mapAuthorRecord(record: AuthorsRecord): Author {
         return Author(
-            id = record.get(AUTHORS.ID),
-            name = record.get(AUTHORS.NAME)!!,
-            birthDate = record.get(AUTHORS.BIRTH_DATE)!!,
-            createdAt = record.get(AUTHORS.CREATED_AT)
+            id = record.getId(),
+            name = record.getName()!!,
+            birthDate = record.getBirthDate()!!,
+            createdAt = record.getCreatedAt()
         )
     }
 }

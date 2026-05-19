@@ -3,11 +3,12 @@ package com.example.bookmanagement.repository
 import com.example.bookmanagement.domain.Author
 import com.example.bookmanagement.domain.Book
 import com.example.bookmanagement.domain.PublicationStatus
+import com.example.bookmanagement.domain.Tables
+import com.example.bookmanagement.domain.tables.records.AuthorsRecord
+import com.example.bookmanagement.domain.tables.records.BookAuthorsRecord
+import com.example.bookmanagement.domain.tables.records.BooksRecord
 import org.jooq.DSLContext
-import org.jooq.Record
-import org.jooq.Result
 import org.springframework.stereotype.Repository
-import com.example.bookmanagement.domain.Tables.*
 
 /**
  * 書籍リポジトリ
@@ -20,21 +21,23 @@ class BookRepository(private val dsl: DSLContext) {
      * 書籍を作成
      */
     fun create(book: Book): Book {
-        return dsl.transactionResult { ctx ->
+        return dsl.transactionResult { configuration ->
+            val ctx = configuration.dsl()
+            
             // 書籍を挿入
-            val bookRecord = ctx.newRecord(BOOKS).apply {
-                this.title = book.title
-                this.price = book.price
-                this.publicationStatus = book.publicationStatus.name
+            val bookRecord = ctx.newRecord(Tables.BOOKS).apply {
+                this.setTitle(book.title)
+                this.setPrice(book.price)
+                this.setPublicationStatus(book.publicationStatus.name)
             }.also { it.insert() }
 
-            val bookId = bookRecord.id
+            val bookId = bookRecord.getId()
 
             // 書籍と著者の関連付けを挿入
             book.authors.forEach { author ->
-                ctx.newRecord(BOOK_AUTHORS).apply {
-                    this.bookId = bookId
-                    this.authorId = author.id
+                ctx.newRecord(Tables.BOOK_AUTHORS).apply {
+                    this.setBookId(bookId)
+                    this.setAuthorId(author.id)
                 }.insert()
             }
 
@@ -46,25 +49,27 @@ class BookRepository(private val dsl: DSLContext) {
      * 書籍を更新
      */
     fun update(id: Long, book: Book): Book {
-        return dsl.transactionResult { ctx ->
+        return dsl.transactionResult { configuration ->
+            val ctx = configuration.dsl()
+            
             // 書籍を更新
-            ctx.update(BOOKS)
-                .set(BOOKS.TITLE, book.title)
-                .set(BOOKS.PRICE, book.price)
-                .set(BOOKS.PUBLICATION_STATUS, book.publicationStatus.name)
-                .where(BOOKS.ID.eq(id))
+            ctx.update(Tables.BOOKS)
+                .set(Tables.BOOKS.TITLE, book.title)
+                .set(Tables.BOOKS.PRICE, book.price)
+                .set(Tables.BOOKS.PUBLICATION_STATUS, book.publicationStatus.name)
+                .where(Tables.BOOKS.ID.eq(id))
                 .execute()
 
             // 既存の関連付けを削除
-            ctx.deleteFrom(BOOK_AUTHORS)
-                .where(BOOK_AUTHORS.BOOK_ID.eq(id))
+            ctx.deleteFrom(Tables.BOOK_AUTHORS)
+                .where(Tables.BOOK_AUTHORS.BOOK_ID.eq(id))
                 .execute()
 
             // 新しい関連付けを挿入
             book.authors.forEach { author ->
-                ctx.newRecord(BOOK_AUTHORS).apply {
-                    this.bookId = id
-                    this.authorId = author.id
+                ctx.newRecord(Tables.BOOK_AUTHORS).apply {
+                    this.setBookId(id)
+                    this.setAuthorId(author.id)
                 }.insert()
             }
 
@@ -76,9 +81,9 @@ class BookRepository(private val dsl: DSLContext) {
      * 全書籍を取得
      */
     fun findAll(): List<Book> {
-        val booksResult: Result<Record> = dsl
-            .selectFrom(BOOKS)
-            .orderBy(BOOKS.ID)
+        val booksResult = dsl
+            .selectFrom(Tables.BOOKS)
+            .orderBy(Tables.BOOKS.ID)
             .fetch()
 
         return booksResult.map { mapBookRecord(it) }
@@ -95,63 +100,63 @@ class BookRepository(private val dsl: DSLContext) {
      * 著者IDに紐づく書籍を取得
      */
     fun findByAuthorId(authorId: Long): List<Book> {
-        val booksResult: Result<Record> = dsl
-            .select(BOOKS.fields().toList())
-            .from(BOOKS)
-            .join(BOOK_AUTHORS).on(BOOK_AUTHORS.BOOK_ID.eq(BOOKS.ID))
-            .where(BOOK_AUTHORS.AUTHOR_ID.eq(authorId))
+        val booksResult = dsl
+            .select(Tables.BOOKS.fields().toList())
+            .from(Tables.BOOKS)
+            .join(Tables.BOOK_AUTHORS).on(Tables.BOOK_AUTHORS.BOOK_ID.eq(Tables.BOOKS.ID))
+            .where(Tables.BOOK_AUTHORS.AUTHOR_ID.eq(authorId))
             .fetch()
 
-        return booksResult.map { mapBookRecord(it) }
+        return booksResult.map { mapBookRecord(it as BooksRecord) }
     }
 
     /**
      * 書籍を削除
      */
     fun delete(id: Long) {
-        dsl.deleteFrom(BOOKS)
-            .where(BOOKS.ID.eq(id))
+        dsl.deleteFrom(Tables.BOOKS)
+            .where(Tables.BOOKS.ID.eq(id))
             .execute()
     }
 
     private fun findByIdInternal(ctx: DSLContext, id: Long): Book? {
-        val bookRecord: Record? = ctx
-            .selectFrom(BOOKS)
-            .where(BOOKS.ID.eq(id))
+        val bookRecord = ctx
+            .selectFrom(Tables.BOOKS)
+            .where(Tables.BOOKS.ID.eq(id))
             .fetchOne()
 
         return bookRecord?.let { mapBookRecord(it) }
     }
 
-    private fun mapBookRecord(record: Record): Book {
-        val bookId = record.get(BOOKS.ID)
+    private fun mapBookRecord(record: BooksRecord): Book {
+        val bookId = record.getId()
         val authors = findAuthorsByBookId(bookId)
 
         return Book(
             id = bookId,
-            title = record.get(BOOKS.TITLE)!!,
-            price = record.get(BOOKS.PRICE)!!,
-            publicationStatus = PublicationStatus.valueOf(record.get(BOOKS.PUBLICATION_STATUS)!!),
+            title = record.getTitle()!!,
+            price = record.getPrice()!!,
+            publicationStatus = PublicationStatus.valueOf(record.getPublicationStatus()!!),
             authors = authors,
-            createdAt = record.get(BOOKS.CREATED_AT),
-            updatedAt = record.get(BOOKS.UPDATED_AT)
+            createdAt = record.getCreatedAt(),
+            updatedAt = record.getUpdatedAt()
         )
     }
 
     private fun findAuthorsByBookId(bookId: Long): List<Author> {
-        val authorRecords: Result<Record> = dsl
-            .select(AUTHORS.fields().toList())
-            .from(AUTHORS)
-            .join(BOOK_AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
-            .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
+        val authorRecords = dsl
+            .select(Tables.AUTHORS.fields().toList())
+            .from(Tables.AUTHORS)
+            .join(Tables.BOOK_AUTHORS).on(Tables.BOOK_AUTHORS.AUTHOR_ID.eq(Tables.AUTHORS.ID))
+            .where(Tables.BOOK_AUTHORS.BOOK_ID.eq(bookId))
             .fetch()
 
         return authorRecords.map { record ->
             Author(
-                id = record.get(AUTHORS.ID),
-                name = record.get(AUTHORS.NAME)!!,
-                birthDate = record.get(AUTHORS.BIRTH_DATE)!!,
-                createdAt = record.get(AUTHORS.CREATED_AT)
+                id = record.get(Tables.AUTHORS.ID),
+                name = record.get(Tables.AUTHORS.NAME)!!,
+                birthDate = record.get(Tables.AUTHORS.BIRTH_DATE)!!,
+                createdAt = record.get(Tables.AUTHORS.CREATED_AT)
             )
         }
     }
