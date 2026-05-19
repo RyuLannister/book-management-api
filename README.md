@@ -1,4 +1,4 @@
-# 書籍管理API
+# 書籍管理システムのバックエンドAPI
 
 クオカード デジタルイノベーションラボのコーディングテスト用プロジェクトです。
 
@@ -10,7 +10,7 @@
 - **マイグレーションツール**: Flyway
 - **データベース**: PostgreSQL
 - **ビルドツール**: Gradle (Groovy DSL)
-- **Javaバージョン**: 21 or 17
+- **Javaバージョン**: 21
 
 ## プロジェクト構造
 
@@ -36,7 +36,7 @@ book-management-api/
 
 ### 前提条件
 
-- JDK 21 or 17
+- JDK 21
 - Docker / Docker Compose
 
 ### 1. PostgreSQLの起動
@@ -111,8 +111,4 @@ java -jar build/libs/book-management-api-0.0.1-SNAPSHOT.jar
 
 ## 注意事項
 
-- 生成AI・AIコーディングエージェントの使用は可能です
-- フロントエンドの実装は不要です（Web APIのみ）
-- 可能な限り単体テストを作成してください
 - テスト件数: 31件（BookServiceTest 10件 + AuthorServiceTest 8件 + BookControllerValidationTest 7件 + AuthorControllerValidationTest 6件）
-- 完成したプロジェクトはGitHubにpublicリポジトリとしてアップロードし、URLをご送付ください
