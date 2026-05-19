@@ -1,7 +1,7 @@
 # Gradle
 build/
+.gradle/
 !gradle/wrapper/gradle-wrapper.jar
-!.gradle/**/gradle-wrapper.jar
 
 # IDE
 .idea/
@@ -28,7 +28,5 @@ generated-src/
 
 # Application
 *.jar
+!gradle/wrapper/*.jar
 *.class
-
-# Gradle cache
-.gradle/
