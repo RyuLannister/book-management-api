@@ -114,4 +114,5 @@ java -jar build/libs/book-management-api-0.0.1-SNAPSHOT.jar
 - 生成AI・AIコーディングエージェントの使用は可能です
 - フロントエンドの実装は不要です（Web APIのみ）
 - 可能な限り単体テストを作成してください
+- テスト件数: 18件（BookServiceTest 10件 + AuthorServiceTest 8件）
 - 完成したプロジェクトはGitHubにpublicリポジトリとしてアップロードし、URLをご送付ください
