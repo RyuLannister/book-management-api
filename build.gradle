@@ -1,0 +1,129 @@
+plugins {
+    id 'org.springframework.boot' version '3.2.5'
+    id 'io.spring.dependency-management' version '1.1.5'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.25'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.9.25'
+    id 'org.flywaydb.flyway' version '10.13.0'
+    id 'org.jooq.jooq-codegen-gradle' version '3.19.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jooq'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Kotlin
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+
+    // PostgreSQL
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // jOOQ
+    implementation 'org.jooq:jooq'
+    
+// Force jOOQ version to match codegen
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.jooq') {
+            details.useVersion '3.19.7'
+        }
+    }
+}
+
+    // Flyway
+    implementation 'org.flywaydb:flyway-core'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.3.1'
+
+    // jOOQコード生成用JDBC driver
+    jooqCodegen 'org.postgresql:postgresql'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'build/generated-src/jooq'
+        }
+        kotlin {
+            srcDir 'build/generated-src/jooq'
+        }
+    }
+}
+
+kotlin {
+    // jvmToolchain(21) // 使用系统Java
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    kotlinOptions {
+        freeCompilerArgs += '-Xjsr305=strict'
+        jvmTarget = '21'
+    }
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+}
+
+// jOOQコード生成タスクへの依存関係を追加
+tasks.named('compileKotlin') {
+    dependsOn 'jooqCodegen'
+}
+
+// jOOQコード生成設定
+jooq {
+    configuration {
+        logging = 'INFO'
+        
+        jdbc {
+            driver = 'org.postgresql.Driver'
+            url = 'jdbc:postgresql://localhost:5432/bookdb'
+            user = 'bookuser'
+            password = 'bookpass'
+        }
+        
+        generator {
+            database {
+                name = 'org.jooq.meta.postgres.PostgresDatabase'
+                inputSchema = 'public'
+            }
+            generate {
+                records = true
+            }
+            target {
+                packageName = 'com.example.bookmanagement.domain'
+                directory = 'build/generated-src/jooq'
+            }
+        }
+    }
+}
+
+// Spring Boot JAR packaging
+bootJar {
+    mainClass = 'com.example.bookmanagement.BookManagementApplicationKt'
+}
+
+// Flyway設定
+flyway {
+    url = 'jdbc:postgresql://localhost:5432/bookdb'
+    user = 'bookuser'
+    password = 'bookpass'
+    locations = ['filesystem:src/main/resources/db/migration']
+}

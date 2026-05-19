@@ -1,0 +1,31 @@
+# Gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!.gradle/**/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*~
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# jOOQ generated code
+generated-src/
+
+# Application
+*.jar
+*.class

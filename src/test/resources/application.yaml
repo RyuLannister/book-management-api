@@ -1,0 +1,21 @@
+# テスト用設定（HSQLDBを使用してテストを実行）
+spring:
+  application:
+    name: book-management-api-test
+
+  datasource:
+    url: jdbc:hsqldb:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.hsqldb.HsqlDatabaseDriver
+
+  jooq:
+    database:
+      dialect: H2
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+server:
+  port: 0
