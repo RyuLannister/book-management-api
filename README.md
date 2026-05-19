@@ -50,19 +50,19 @@ docker-compose up -d
 ※ 初回のビルド時にjOOQがデータベースに接続し、コードを一括生成します。
 
 ```bash
-./gradlew generateJooq
+gradle generateJooq
 ```
 
 ### 3. アプリケーションの起動
 
 ```bash
-./gradlew bootRun
+gradle bootRun
 ```
 
 またはJARファイルをビルドして実行：
 
 ```bash
-./gradlew build
+gradle build
 java -jar build/libs/book-management-api-0.0.1-SNAPSHOT.jar
 ```
 

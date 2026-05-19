@@ -28,5 +28,4 @@ generated-src/
 
 # Application
 *.jar
-!gradle/wrapper/*.jar
 *.class
