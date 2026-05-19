@@ -111,4 +111,4 @@ java -jar build/libs/book-management-api-0.0.1-SNAPSHOT.jar
 
 ## 注意事項
 
-- テスト件数: 18件（BookServiceTest 10件 + AuthorServiceTest 8件）
+- テスト件数: 31件（BookServiceTest 10件 + AuthorServiceTest 8件 + BookControllerValidationTest 7件 + AuthorControllerValidationTest 6件）
