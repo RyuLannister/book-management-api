@@ -27,7 +27,7 @@ class AuthorRepository(private val dsl: DSLContext) {
     }
 
     /**
-     *  著者を更新
+     * 著者を更新
      */
     fun update(id: Long, author: Author): Author {
         dsl.update(Tables.AUTHORS)
@@ -40,7 +40,7 @@ class AuthorRepository(private val dsl: DSLContext) {
     }
 
     /**
-     * 全 著者を取得
+     * 全著者を取得
      */
     fun findAll(): List<Author> {
         return dsl.selectFrom(Tables.AUTHORS)
@@ -72,7 +72,7 @@ class AuthorRepository(private val dsl: DSLContext) {
     }
 
     /**
-     * 複数の 著者が存在するか確認
+     * 複数の著者が存在するか確認
      */
     fun existsByIds(ids: List<Long>): Boolean {
         val count = dsl.selectCount()
@@ -84,7 +84,7 @@ class AuthorRepository(private val dsl: DSLContext) {
     }
 
     /**
-     *  著者を削除
+     * 著者を削除
      */
     fun delete(id: Long) {
         dsl.deleteFrom(Tables.AUTHORS)
